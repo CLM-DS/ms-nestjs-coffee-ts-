@@ -1,0 +1,426 @@
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+  DOCK_REG_GRP: "api"
+  DOCK_IMG: "coffee-api"
+  SOURCE_CODE_PATH: '*/*/'
+  SOLUTION_DIRECTORY: 'dist'
+  KUBE_NAMESPACE: 'default'
+  RELEASE_NAME: 'coffee-api'
+  # GCP_API_IPNAME: 'domain-apiservice'
+
+cache:
+  key: $CI_COMMIT_REF_SLUG
+  paths:
+    - node_modules/
+
+stages:
+  - pre-version
+  - build
+  - test
+  - codequality
+  - package
+  - validate
+  - deploy
+  - testing
+  - rollback
+  - release
+
+.job_template: &job_deploy
+  image: clmdevops/k8s-alpine:1.18.2
+  stage: deploy
+  cache: {}
+  script:
+    - echo "Version is $(cat VERSION.txt)"
+    - export APP_VERSION=$(cat VERSION.txt)
+    - set_k8s
+    - docker_registry_gcp
+    - deploy_gke
+  except:
+    refs:
+    - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+pre-semantic-version:
+  image: clmdevops/semantic-release
+  stage: pre-version
+  only:
+    refs:
+      - master
+      - develop
+      - /release?\/.*/
+  except:
+    refs:
+      - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  script:
+    - npx semantic-release --generate-notes false --dry-run
+  artifacts:
+    paths:
+      - VERSION.txt
+  tags:
+    # - kubernetes
+    - docker
+
+generate-non-semantic-version:
+  stage: pre-version
+  except:
+    refs:
+      - master
+      - develop
+      - /release?\/.*/
+      - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  script:
+    - echo build-$CI_PIPELINE_ID > VERSION.txt
+  artifacts:
+    paths:
+      - VERSION.txt
+
+build:
+  image: node:14-alpine
+  stage: build
+  script:
+    - yarn install
+  only:
+    refs:
+    - branches
+  except:
+    refs:
+    - tags
+    - master
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+unit_test:
+  image: node:14-alpine
+  stage: test
+  script:
+    - yarn test
+  only:
+    refs:
+    - branches
+  except:
+    refs:
+    - tags
+    - master
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+functional_test:
+  image: node:14-alpine
+  variables:
+    POSTGRES_PASSWORD: "postgres"
+  services:
+    - name: postgres:9.6
+      alias: db
+  stage: test
+  script:
+    - yarn test:e2e
+  only:
+    refs:
+    - branches
+  except:
+    refs:
+    - tags
+    - master
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+sonar_test:
+  image: sonarsource/sonar-scanner-cli
+  stage: test
+  # allow_failure: true
+  variables:
+    SONAR_SOURCE: "src"
+  before_script:
+    # Validar que existe el archivo sonar-project.properties requerido.
+    - |
+      if [ -f sonar-project.properties ]
+        then
+          echo "Existe archivo sonar-project.properties."
+          cat sonar-project.properties
+        else
+          echo "No existe archivo sonar-project.properties." ; exit 1
+      fi
+     # Validar la existencia de la variable sonar_source.
+    - if [ -z "$SONAR_SOURCE" ]; then export SONAR_SOURCE="."; fi
+    # Tipos administidos: NodeJS, Gradle, Maven
+    - echo "Obteniendo la version de la app"
+    - SONAR_PROJECT_VERSION=$(cat VERSION.txt)
+    - echo $SONAR_PROJECT_VERSION
+  script:
+    - sonar-scanner --debug
+  only:
+    refs:
+    - branches
+  except:
+    refs:
+    - tags
+    - master
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+detect_secrets:
+  image: clmdevops/detect-secrets:0.14.3
+  stage: test
+  variables:
+    SCAN_SOURCE: "."
+  script:
+    - detect-secrets scan $SCAN_SOURCE >> .detect-secrets-log.json
+    - jq . .detect-secrets-log.json -C
+  only:
+    refs:
+    - branches
+  except:
+    refs:
+    - tags
+    - master
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+package_docker:
+  image: docker:19.03.12
+  stage: package
+  services:
+    - docker:19.03.12-dind
+  cache: {}
+  before_script:
+    - docker info
+    - echo "Obteniendo la version de la app"
+    - DOCK_VERSION=$(cat VERSION.txt)
+    - echo $DOCK_VERSION
+    # Login en docker registry
+    - echo "Construyendo la imagen DOCKER de la APP"
+    - docker login
+        -u ${DOCK_REG_USER_GCP}
+        -p "$(cat $DOCK_REG_PWD_GCP)"
+        ${DOCK_REG_GCP}
+  script:
+    - |
+      echo 'Crear tag de imagen docker'
+      docker build -t ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION} .
+      docker push ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION}
+      if [ "$DOCKER_LATEST" = true ] ; then
+        echo 'Crear tag de imagen docker latest'
+        docker tag ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION} \
+            ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:latest
+        docker push ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:latest
+      fi
+  only:
+    refs:
+      - master
+      - develop
+      - /release?\/.*/
+  except:
+    refs:
+    - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+validate_docker:
+  image: clmdevops/klar:2.4.0
+  stage: validate
+  cache: {}
+  variables:
+    CLAIR_ADDR: "clairsvc"
+    CLAIR_OUTPUT: "Low"
+    CLAIR_THRESHOLD: "10"
+    FORMAT_OUTPUT: "table"
+    DOCKER_USER: $DOCK_REG_USER_GCP
+  before_script:
+    - export DOCKER_PASSWORD=$(cat $DOCK_REG_PWD_GCP)
+    - echo "Obteniendo la version de la app"
+    - DOCK_VERSION=$(cat VERSION.txt)
+    - echo $DOCK_VERSION    
+  script:
+    - klar ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION}
+  only:
+    refs:
+      - master
+      - develop
+      - /release?\/.*/
+  except:
+    refs:
+    - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+deploy:dev:
+  <<: *job_deploy
+  environment:
+      name: develop
+  only:
+    refs:
+      - develop
+
+deploy:qa:
+  <<: *job_deploy
+  environment:
+      name: testing
+  only:
+    refs:
+      - /release?\/.*/
+
+deploy:prod:
+  <<: *job_deploy
+  environment:
+      name: production
+  only:
+    refs:
+      - master
+
+testing:
+  image: clmdevops/k8s-alpine:1.18.2
+  stage: testing
+  cache: {}
+  script:
+    - set_k8s
+    - helm test ${RELEASE_NAME} --namespace ${KUBE_NAMESPACE}
+    - kubectl delete pod ${RELEASE_NAME}-test-connection 
+  only:
+    refs:
+      - develop
+      - /release?\/.*/
+      - master
+  except:
+    refs:
+    - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+rollback:
+  image: clmdevops/k8s-alpine:1.18.2
+  stage: rollback
+  cache: {}
+  script:
+    - set_k8s
+    - echo "Realizar el rollback de la app a la version $RELEASE_NAME"
+    - helm history $RELEASE_NAME | grep deployed
+    - echo "Ejecutar comando de rollback con helm"
+    - helm rollback $RELEASE_NAME $(helm history $RELEASE_NAME | grep deployed | cut -f1) --wait
+    - helm status $RELEASE_NAME
+  when: on_failure
+  only:
+    refs:
+      - develop
+      - /release?\/.*/
+      - master
+  except:
+    refs:
+    - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+release:
+  image: clmdevops/semantic-release
+  stage: release
+  cache: {}
+  script:
+    - npx semantic-release
+  only:
+    refs:
+      - master
+      - develop
+      - /release?\/.*/
+  except:
+    refs:
+      - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  artifacts:
+    paths:
+    - CHANGELOG.md
+  tags:
+    # - kubernetes
+    - docker
+
+.script_exec: &script_exec |
+ [[ "$TRACE" ]] && set -x
+
+  function set_k8s() {
+    echo $CI_COMMIT_REF_SLUG
+    echo "Realizar la seleccion de carpeta de ambiente."
+    if [ $CI_COMMIT_REF_SLUG == "master" ]
+      then
+        export KUBECONFIG=$KUBECONFIG_BASKET_PROD
+        export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
+
+    elif [[ $(echo "$CI_COMMIT_REF_SLUG" | grep -E ^release.*) ]]
+      then
+        export KUBECONFIG=$KUBECONFIG_BASKET_QA
+        export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
+        # export RELEASE_NAME=basket-api-qa
+
+    elif [[ $(echo "$CI_COMMIT_REF_SLUG" | grep develop) ]]
+      then
+        export KUBECONFIG=$KUBECONFIG_BASKET_DEV
+        export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
+        # export RELEASE_NAME=basket-api-dev
+    fi
+  }
+
+  function docker_registry_gcp() {
+    kubectl -n ${KUBE_NAMESPACE} create secret docker-registry ${RELEASE_NAME} \
+        --docker-server="https://${DOCK_REG_GCP}" \
+        --docker-username=${DOCK_REG_USER_GCP} \
+        --docker-email=${DOCK_REG_EMAIL_GCP} \
+        --docker-password="$(cat $DOCK_REG_PWD_GCP)" || true
+  }
+
+  function deploy_gke() {
+    echo "Desplegar los prerrequisitos"
+    kubectl apply -f ./k8s/rabbitmq.yaml
+    kubectl apply -f ./k8s/redis.yaml
+    sleep 30
+    sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
+    helm upgrade ${RELEASE_NAME} ./k8s/${RELEASE_NAME} --install --wait --timeout 1m \
+      --namespace ${KUBE_NAMESPACE} \
+      --set image.repository=${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG} \
+      --set image.tag=${APP_VERSION} \
+      --set imagePullSecrets=${RELEASE_NAME} \
+      --set service.type=NodePort \
+      --set ingress.enabled=true \
+      --set-string ingress.annotations."kubernetes\.io/ingress\.global-static-ip-name"=${GCP_API_IPNAME} \
+      --set-string ingress.annotations."networking\.gke\.io/managed-certificates"=${RELEASE_NAME}
+  }
+
+
+before_script:
+  - *script_exec
+
+
