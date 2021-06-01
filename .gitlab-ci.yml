@@ -127,8 +127,7 @@ functional_test:
     POSTGRES_USER: "postgres"
     POSTGRES_DB: "postgres"
   services:
-    - name: postgres:9.6
-      alias: db
+    - postgres:9.6
   stage: test
   script:
     - yarn test:e2e
