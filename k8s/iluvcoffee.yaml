@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: iluvcoffee
+  labels:
+    app: iluvcoffee
+  # annotations:
+  #   cloud.google.com/load-balancer-type: "internal"
+  #   cloud.google.com/neg: '{"exposed_ports":{"80":{}}}'
+spec:
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 3000
+  # - name: https
+  #   # protocol: TCP
+  #   port: 443
+  #   targetPort: 5000
+  selector:
+    app: iluvcoffee
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iluvcoffee
+  labels:
+    app: iluvcoffee
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: iluvcoffee
+  template:
+    metadata:
+      labels:
+        app: iluvcoffee
+        version: v1
+    spec:
+      containers:
+      - name: iluvcoffee
+        image: clmdevops/iluvcoffee
+        resources:
+          requests:
+            cpu: "100m"
+        imagePullPolicy: Always #IfNotPresent
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - iluvcoffee
+              topologyKey: kubernetes.io/hostname
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: iluvcoffee
+  labels:
+    app: iluvcoffee
+spec:
+  maxReplicas: 10
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: iluvcoffee
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 80

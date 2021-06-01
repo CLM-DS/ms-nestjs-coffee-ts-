@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: iluvcoffee
+spec:
+  hosts:
+  - "api1.clm.team"
+  gateways:
+  - global-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /coffees
+    route:
+    - destination:
+        host: iluvcoffee
+        port:
+          number: 80
+        
