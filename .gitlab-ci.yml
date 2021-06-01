@@ -105,6 +105,7 @@ build:
 unit_test:
   image: node:14-alpine
   stage: test
+  allow_failure: true
   script:
     - yarn test
   only:
@@ -130,6 +131,7 @@ functional_test:
     - name: postgres:9.6
       alias: postgres
   stage: test
+  # allow_failure: true
   script:
     - yarn test:e2e
   only:
@@ -148,7 +150,7 @@ functional_test:
 sonar_test:
   image: sonarsource/sonar-scanner-cli
   stage: test
-  # allow_failure: true
+  allow_failure: true
   variables:
     SONAR_SOURCE: "src"
   before_script:
@@ -185,6 +187,7 @@ sonar_test:
 detect_secrets:
   image: clmdevops/detect-secrets:0.14.3
   stage: test
+  # allow_failure: true
   variables:
     SCAN_SOURCE: "."
   script:
