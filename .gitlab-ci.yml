@@ -4,7 +4,6 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCK_REG_GRP: "api"
   DOCK_IMG: "coffee-api"
-  SOURCE_CODE_PATH: '*/*/'
   SOLUTION_DIRECTORY: 'dist'
   KUBE_NAMESPACE: 'default'
   RELEASE_NAME: 'coffee-api'
@@ -28,7 +27,7 @@ stages:
   - release
 
 .job_template: &job_deploy
-  image: clmdevops/k8s-alpine:1.18.2
+  image: kiwigrid/gcloud-kubectl-helm:3.3.4-312.0.0-267
   stage: deploy
   cache: {}
   script:
@@ -382,21 +381,23 @@ release:
     echo "Realizar la seleccion de carpeta de ambiente."
     if [ $CI_COMMIT_REF_SLUG == "master" ]
       then
-        export KUBECONFIG=$KUBECONFIG_BASKET_PROD
+        # export KUBECONFIG=$KUBECONFIG_BASKET_PROD
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
 
     elif [[ $(echo "$CI_COMMIT_REF_SLUG" | grep -E ^release.*) ]]
       then
-        export KUBECONFIG=$KUBECONFIG_BASKET_QA
+        # export KUBECONFIG=$KUBECONFIG_BASKET_QA
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
-        # export RELEASE_NAME=basket-api-qa
 
     elif [[ $(echo "$CI_COMMIT_REF_SLUG" | grep develop) ]]
       then
-        export KUBECONFIG=$KUBECONFIG_BASKET_DEV
+        # export KUBECONFIG=$KUBECONFIG_BASKET_DEV
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
         # export RELEASE_NAME=basket-api-dev
     fi
+    echo "Realizar conexion al GKE"
+    gcloud auth activate-service-account $GCP_EMAIL_SA_GKE --key-file=$GOOGLE_APPLICATION_CREDENTIALS --project $GCP_PROJECT_ID
+    gcloud container clusters get-credentials $GCP_GKE_ID --zone $GCP_GKE_ZONE_ID --project $GCP_PROJECT_ID
   }
 
   function docker_registry_gcp() {
@@ -408,20 +409,21 @@ release:
   }
 
   function deploy_gke() {
-    echo "Desplegar los prerrequisitos"
-    kubectl apply -f ./k8s/rabbitmq.yaml
-    kubectl apply -f ./k8s/redis.yaml
-    sleep 30
-    sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
-    helm upgrade ${RELEASE_NAME} ./k8s/${RELEASE_NAME} --install --wait --timeout 1m \
-      --namespace ${KUBE_NAMESPACE} \
-      --set image.repository=${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG} \
-      --set image.tag=${APP_VERSION} \
-      --set imagePullSecrets=${RELEASE_NAME} \
-      --set service.type=NodePort \
-      --set ingress.enabled=true \
-      --set-string ingress.annotations."kubernetes\.io/ingress\.global-static-ip-name"=${GCP_API_IPNAME} \
-      --set-string ingress.annotations."networking\.gke\.io/managed-certificates"=${RELEASE_NAME}
+    # echo "Desplegar los prerrequisitos"
+    # kubectl apply -f ./k8s/rabbitmq.yaml
+    # kubectl apply -f ./k8s/redis.yaml
+    echo "Desplegando..."
+    # sleep 30
+    # sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
+    # helm upgrade ${RELEASE_NAME} ./k8s/${RELEASE_NAME} --install --wait --timeout 1m \
+    #   --namespace ${KUBE_NAMESPACE} \
+    #   --set image.repository=${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG} \
+    #   --set image.tag=${APP_VERSION} \
+    #   --set imagePullSecrets=${RELEASE_NAME} \
+    #   --set service.type=NodePort \
+    #   --set ingress.enabled=true \
+    #   --set-string ingress.annotations."kubernetes\.io/ingress\.global-static-ip-name"=${GCP_API_IPNAME} \
+    #   --set-string ingress.annotations."networking\.gke\.io/managed-certificates"=${RELEASE_NAME}
   }
 
 
