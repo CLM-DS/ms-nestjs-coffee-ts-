@@ -1,9 +1,11 @@
 # ### BASE
-# FROM node:latest AS base
+# FROM node:14-alpine AS base
 # # Set the working directory
 # WORKDIR /app
 # # Copy project specification and dependencies lock files
+# COPY ./node_modules node_modules
 # COPY *.json ./
+# COPY *.lock ./
 # # COPY pub-sub-key.json ./
 # # COPY .env ./
 # # Install Node.js development dependencies if --build-arg DEBUG=1, or production dependencies
@@ -15,7 +17,6 @@ FROM node:latest AS relase
 WORKDIR /app
 # COPY --from=base /app/dist ./dist
 COPY ./dist ./dist
-COPY . .
-
+# COPY . .
 # Run
 CMD [ "yarn", "start:prod" ]

@@ -1,16 +1,43 @@
 apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: iluvcoffee
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "apicoffee.clm.team"
+    tls:
+      httpsRedirect: true # sends 301 redirect for http requests
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - "apicoffee.clm.team"
+    tls:
+      mode: SIMPLE
+      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
+      privateKey: /etc/istio/ingressgateway-certs/tls.key
+---
+apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
   name: iluvcoffee
 spec:
   hosts:
-  - "api1.clm.team"
+  - "apicoffee.clm.team"
   gateways:
-  - global-gateway
+  - iluvcoffee
   http:
   - match:
     - uri:
-        prefix: /coffees
+        prefix: /
     route:
     - destination:
         host: iluvcoffee

@@ -19,7 +19,7 @@ spec:
   #   targetPort: 5000
   selector:
     app: iluvcoffee
-  type: LoadBalancer
+  type: ClusterIP
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,7 +29,7 @@ metadata:
     app: iluvcoffee
     version: v1
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: iluvcoffee
@@ -41,10 +41,25 @@ spec:
     spec:
       containers:
       - name: iluvcoffee
-        image: clmdevops/iluvcoffee
+        image: clmdevops/iluvcoffee:1.0.0
+        env:
+        - name: DATABASE_USER
+          value: postgres
+        - name: DATABASE_PASSWORD
+          value: Mrb1mBjpc6IFNd1i
+        - name: DATABASE_NAME
+          value: postgres
+        - name: DATABASE_PORT
+          value: "5432"
+        - name: DATABASE_HOST
+          value: "10.39.193.3"
         resources:
           requests:
+            memory: "64Mi"
             cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
         imagePullPolicy: Always #IfNotPresent
         ports:
         - containerPort: 3000
@@ -83,8 +98,8 @@ metadata:
   labels:
     app: iluvcoffee
 spec:
-  maxReplicas: 10
-  minReplicas: 3
+  maxReplicas: 3
+  minReplicas: 1
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment

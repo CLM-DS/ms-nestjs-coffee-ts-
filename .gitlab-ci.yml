@@ -87,7 +87,34 @@ build:
   image: node:14-alpine
   stage: build
   script:
-    - yarn install
+    - yarn install && yarn build
+  only:
+    refs:
+    - branches
+  except:
+    refs:
+    - tags
+    - master
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  artifacts:
+    paths:
+      - dist/
+  tags:
+    # - kubernetes
+    - docker
+
+unit_test:
+  image: node:14-alpine
+  stage: test
+  allow_failure: true
+  script:
+    - yarn test
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - junit.xml
   only:
     refs:
     - branches
@@ -101,12 +128,17 @@ build:
     # - kubernetes
     - docker
 
-unit_test:
+coverage_test:
   image: node:14-alpine
   stage: test
   allow_failure: true
   script:
-    - yarn test
+    - yarn test:cov
+  artifacts:
+    when: always
+    reports:
+      cobertura:
+        - coverage/clover.xml
   only:
     refs:
     - branches

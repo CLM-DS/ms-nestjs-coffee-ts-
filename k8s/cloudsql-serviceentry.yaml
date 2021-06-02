@@ -1,0 +1,14 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: cloudsql-srventry
+spec:
+  hosts:
+  - dummy.cloudsql.com # not used
+  addresses:
+  - "10.39.193.3/32"
+  ports:
+  - number: 5432
+    name: tcp
+    protocol: TCP
+  location: MESH_EXTERNAL
