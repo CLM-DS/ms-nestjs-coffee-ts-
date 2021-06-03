@@ -1,0 +1,13 @@
+coverage/
+k8s/
+src/
+test/
+.gitignore
+.gitlab-ci.yml
+.releaserc.yml
+.env
+.eslintrc.js
+.prettierrc
+docker-compose.yml
+junit.xml
+sonar-project.properties
