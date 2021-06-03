@@ -6,7 +6,7 @@ variables:
   DOCK_IMG: "coffee-api"
   SOLUTION_DIRECTORY: 'dist'
   # KUBE_NAMESPACE: 'default'
-  # RELEASE_NAME: 'coffee-api'
+  API_NAME: 'coffee-api'
   # GCP_API_IPNAME: 'domain-apiservice'
 
 cache:
@@ -517,7 +517,7 @@ release:
     echo "Desplegando..."
     # sleep 30
     sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
-    helm upgrade ${RELEASE_NAME} ./k8s/${RELEASE_NAME} --install --wait --timeout 1m \
+    helm upgrade ${RELEASE_NAME} ./k8s/${API_NAME} --install --wait --timeout 1m \
       --namespace ${KUBE_NAMESPACE} \
       --set image.repository=${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG} \
       --set image.tag=${APP_VERSION} \
