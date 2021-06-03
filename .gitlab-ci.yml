@@ -178,9 +178,31 @@ functional_test:
     # - kubernetes
     - docker
 
+detect_secrets:
+  image: clmdevops/detect-secrets:0.14.3
+  stage: test
+  # allow_failure: true
+  variables:
+    SCAN_SOURCE: "."
+  script:
+    - detect-secrets scan $SCAN_SOURCE >> .detect-secrets-log.json
+    - jq . .detect-secrets-log.json -C
+  only:
+    refs:
+    - branches
+  except:
+    refs:
+    - tags
+    - master
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
 sonar_test:
   image: sonarsource/sonar-scanner-cli
-  stage: test
+  stage: codequality
   allow_failure: true
   variables:
     SONAR_SOURCE: "src"
@@ -204,6 +226,9 @@ sonar_test:
     - echo $SONAR_PROJECT_VERSION
   script:
     - sonar-scanner --debug
+  needs:
+    - unit_test
+    - coverage_test
   only:
     refs:
     - branches
@@ -216,29 +241,7 @@ sonar_test:
   tags:
     # - kubernetes
     - docker
-
-detect_secrets:
-  image: clmdevops/detect-secrets:0.14.3
-  stage: test
-  # allow_failure: true
-  variables:
-    SCAN_SOURCE: "."
-  script:
-    - detect-secrets scan $SCAN_SOURCE >> .detect-secrets-log.json
-    - jq . .detect-secrets-log.json -C
-  only:
-    refs:
-    - branches
-  except:
-    refs:
-    - tags
-    - master
-    variables:
-      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
-  tags:
-    # - kubernetes
-    - docker
-
+    
 package_docker:
   image: docker:19.03.12
   stage: package
@@ -287,7 +290,7 @@ validate_docker:
   stage: validate
   cache: {}
   variables:
-    CLAIR_ADDR: "clairsvc"
+    CLAIR_ADDR: "clair"
     CLAIR_OUTPUT: "Low"
     CLAIR_THRESHOLD: "10"
     FORMAT_OUTPUT: "table"
