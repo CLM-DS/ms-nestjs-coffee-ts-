@@ -252,7 +252,7 @@ package_docker:
   stage: package
   services:
     - docker:19.03.12-dind
-  cache: {}
+  # cache: {}
   before_script:
     - docker info
     - echo "Obteniendo la version de la app"
@@ -345,7 +345,7 @@ deploy:prod:
     refs:
       - master
 
-testing:
+testing_k8s:
   image: clmdevops/k8s-alpine:1.18.2
   stage: testing
   cache: {}
@@ -358,6 +358,32 @@ testing:
       - develop
       - /release?\/.*/
       - master
+  except:
+    refs:
+    - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
+testing_api:
+  image: 
+    name: postman/newman:5-alpine
+    # Se utiliza esta linea para reemplazar el comando de inicio de la imagen docker
+    entrypoint: [""]
+  stage: testing
+  cache: {}
+  script:
+    - newman run test/coffee-api.test.json --reporters cli,junit 
+  only:
+    refs:
+      - develop
+      - /release?\/.*/
+      - master
+  artifacts:
+    reports:
+      junit: newman/newman-run-report-*.xml
   except:
     refs:
     - tags
