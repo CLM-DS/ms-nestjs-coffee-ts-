@@ -94,7 +94,6 @@ build:
   except:
     refs:
     - tags
-    - master
     variables:
       - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
   artifacts:

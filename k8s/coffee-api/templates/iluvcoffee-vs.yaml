@@ -1,7 +1,9 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: coffee-api
+  name: {{ include "coffee-api.fullname" . }}
+  labels:
+    {{- include "coffee-api.labels" . | nindent 4 }}
 spec:
   selector:
     istio: ingressgateway # use istio default controller
@@ -28,19 +30,21 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: coffee-api
+  name: {{ include "coffee-api.fullname" . }}
+  labels:
+    {{- include "coffee-api.labels" . | nindent 4 }}
 spec:
   hosts:
   - "apicoffee.clm.team"
   gateways:
-  - coffee-api
+  - {{ include "coffee-api.fullname" . }}
   http:
   - match:
     - uri:
         prefix: /
     route:
     - destination:
-        host: coffee-api
+        host: {{ include "coffee-api.fullname" . }}
         port:
           number: 80
         
