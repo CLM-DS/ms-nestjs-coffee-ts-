@@ -516,7 +516,7 @@ release:
     kubectl label namespace ${KUBE_NAMESPACE} istio-injection=enabled || true
     echo "Desplegando..."
     # sleep 30
-    sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
+    sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${API_NAME}/Chart.yaml
     helm upgrade ${RELEASE_NAME} ./k8s/${API_NAME} --install --wait --timeout 1m \
       --namespace ${KUBE_NAMESPACE} \
       --set image.repository=${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG} \
