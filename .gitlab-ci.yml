@@ -306,6 +306,7 @@ validate_docker:
     - echo $DOCK_VERSION    
   script:
     - klar ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION}
+  retry: 1
   only:
     refs:
       - master
@@ -351,7 +352,7 @@ testing_k8s:
   script:
     - set_k8s
     - helm test ${RELEASE_NAME} --namespace ${KUBE_NAMESPACE}
-    - kubectl delete pod ${RELEASE_NAME}-test-connection 
+    - kubectl delete pod ${RELEASE_NAME}-test-connection --namespace ${KUBE_NAMESPACE}
   only:
     refs:
       - develop
