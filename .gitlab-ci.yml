@@ -184,6 +184,8 @@ sonar_test:
   allow_failure: true
   variables:
     SONAR_SOURCE: "src"
+    SONAR_TEST: "test"
+    SONAR_TEST_INCLUSIONS: "src/**/*.spec.ts,src/**/*.test.ts"
   before_script:
     # Validar que existe el archivo sonar-project.properties requerido.
     - |
@@ -257,6 +259,7 @@ package_docker:
   script:
     - |
       echo 'Crear tag de imagen docker'
+      ls
       docker build -t ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION} .
       docker push ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION}
       if [ "$DOCKER_LATEST" = true ] ; then
