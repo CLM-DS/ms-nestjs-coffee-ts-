@@ -393,6 +393,32 @@ testing_api:
     # - kubernetes
     - docker
 
+testing_load:
+  image: 
+    name: loadimpact/k6:0.32.0
+    # Se utiliza esta linea para reemplazar el comando de inicio de la imagen docker
+    entrypoint: [""]
+  stage: testing
+  cache: {}
+  script:
+    - k6 run test/coffee-api.loadtest.js 
+  only:
+    refs:
+      - develop
+      - /release?\/.*/
+      - master
+  artifacts:
+    reports:
+      junit: k6-junit.xml
+  except:
+    refs:
+    - tags
+    variables:
+      - $CI_COMMIT_TITLE =~ /^RELEASE:.+$/
+  tags:
+    # - kubernetes
+    - docker
+
 rollback:
   image: kiwigrid/gcloud-kubectl-helm:3.3.4-312.0.0-267
   stage: rollback
