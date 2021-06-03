@@ -227,6 +227,7 @@ sonar_test:
   script:
     - sonar-scanner --debug
   needs:
+    - pre-semantic-version
     - unit_test
     - coverage_test
   only:
@@ -431,7 +432,7 @@ release:
       then
         # export KUBECONFIG=$KUBECONFIG_BASKET_DEV
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
-        # export RELEASE_NAME=basket-api-dev
+        # export RELEASE_NAME=coffee-api-dev
     fi
     echo "Realizar conexion al GKE"
     gcloud auth activate-service-account $GCP_EMAIL_SA_GKE --key-file=$GOOGLE_APPLICATION_CREDENTIALS --project $GCP_PROJECT_ID
@@ -452,16 +453,12 @@ release:
     # kubectl apply -f ./k8s/redis.yaml
     echo "Desplegando..."
     # sleep 30
-    # sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
-    # helm upgrade ${RELEASE_NAME} ./k8s/${RELEASE_NAME} --install --wait --timeout 1m \
-    #   --namespace ${KUBE_NAMESPACE} \
-    #   --set image.repository=${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG} \
-    #   --set image.tag=${APP_VERSION} \
-    #   --set imagePullSecrets=${RELEASE_NAME} \
-    #   --set service.type=NodePort \
-    #   --set ingress.enabled=true \
-    #   --set-string ingress.annotations."kubernetes\.io/ingress\.global-static-ip-name"=${GCP_API_IPNAME} \
-    #   --set-string ingress.annotations."networking\.gke\.io/managed-certificates"=${RELEASE_NAME}
+    sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
+    helm upgrade ${RELEASE_NAME} ./k8s/${RELEASE_NAME} --install --wait --timeout 1m \
+      --namespace ${KUBE_NAMESPACE} \
+      --set image.repository=${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG} \
+      --set image.tag=${APP_VERSION} \
+      --set imagePullSecrets=${RELEASE_NAME} 
   }
 
 
