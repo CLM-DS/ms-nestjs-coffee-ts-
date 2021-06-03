@@ -346,7 +346,7 @@ deploy:prod:
       - master
 
 testing_k8s:
-  image: clmdevops/k8s-alpine:1.18.2
+  image: kiwigrid/gcloud-kubectl-helm:3.3.4-312.0.0-267
   stage: testing
   cache: {}
   script:
@@ -394,7 +394,7 @@ testing_api:
     - docker
 
 rollback:
-  image: clmdevops/k8s-alpine:1.18.2
+  image: kiwigrid/gcloud-kubectl-helm:3.3.4-312.0.0-267
   stage: rollback
   cache: {}
   script:
