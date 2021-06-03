@@ -113,10 +113,10 @@ unit_test:
   artifacts:
     when: always
     paths:
-      - junit.xml
+      - test-report.xml
     reports:
       junit:
-        - junit.xml
+        - test-report.xml
   only:
     refs:
     - branches
