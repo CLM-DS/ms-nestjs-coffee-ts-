@@ -112,6 +112,8 @@ unit_test:
     - yarn test
   artifacts:
     when: always
+    paths:
+      - junit.xml
     reports:
       junit:
         - junit.xml
