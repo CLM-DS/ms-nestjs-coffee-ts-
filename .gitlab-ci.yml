@@ -5,8 +5,8 @@ variables:
   DOCK_REG_GRP: "api"
   DOCK_IMG: "coffee-api"
   SOLUTION_DIRECTORY: 'dist'
-  KUBE_NAMESPACE: 'default'
-  RELEASE_NAME: 'coffee-api'
+  # KUBE_NAMESPACE: 'default'
+  # RELEASE_NAME: 'coffee-api'
   # GCP_API_IPNAME: 'domain-apiservice'
 
 cache:
@@ -478,17 +478,22 @@ release:
       then
         # export KUBECONFIG=$KUBECONFIG_BASKET_PROD
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
+        export KUBE_NAMESPACE=production
+        export RELEASE_NAME=coffee-api-prod
 
     elif [[ $(echo "$CI_COMMIT_REF_SLUG" | grep -E ^release.*) ]]
       then
         # export KUBECONFIG=$KUBECONFIG_BASKET_QA
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
+        export KUBE_NAMESPACE=testing
+        export RELEASE_NAME=coffee-api-qa
 
     elif [[ $(echo "$CI_COMMIT_REF_SLUG" | grep develop) ]]
       then
         # export KUBECONFIG=$KUBECONFIG_BASKET_DEV
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
-        # export RELEASE_NAME=coffee-api-dev
+        export KUBE_NAMESPACE=default
+        export RELEASE_NAME=coffee-api-dev
     fi
     echo "Realizar conexion al GKE"
     gcloud auth activate-service-account $GCP_EMAIL_SA_GKE --key-file=$GOOGLE_APPLICATION_CREDENTIALS --project $GCP_PROJECT_ID
@@ -504,9 +509,11 @@ release:
   }
 
   function deploy_gke() {
-    # echo "Desplegar los prerrequisitos"
-    # kubectl apply -f ./k8s/rabbitmq.yaml
-    # kubectl apply -f ./k8s/redis.yaml
+    echo "Configurar los prerrequisitos"
+    # Crear el namespace si no existe
+    kubectl create namespace ${KUBE_NAMESPACE} || true
+    # Activar la inyeccion automatica del sidecar de istio
+    kubectl label namespace ${KUBE_NAMESPACE} istio-injection=enabled || true
     echo "Desplegando..."
     # sleep 30
     sed -i "s/^appVersion:.*$/appVersion: ${APP_VERSION}/" ./k8s/${RELEASE_NAME}/Chart.yaml
