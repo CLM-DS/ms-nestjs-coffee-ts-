@@ -116,7 +116,7 @@ unit_test:
       - test-report.xml
     reports:
       junit:
-        - test-report.xml
+        - junit.xml
   only:
     refs:
     - branches
