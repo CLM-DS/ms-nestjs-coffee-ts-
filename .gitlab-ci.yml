@@ -136,6 +136,8 @@ coverage_test:
     - yarn test:cov
   artifacts:
     when: always
+    paths:
+      - coverage/
     reports:
       cobertura:
         - coverage/clover.xml
