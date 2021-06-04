@@ -36,6 +36,8 @@ stages:
     - set_k8s
     - docker_registry_gcp
     - deploy_gke
+  needs:
+    - validate_docker
   except:
     refs:
     - tags
@@ -88,6 +90,8 @@ build:
   stage: build
   script:
     - yarn install && yarn build
+  needs:
+    - pre-semantic-version
   only:
     refs:
     - branches
@@ -109,6 +113,8 @@ unit_test:
   allow_failure: true
   script:
     - yarn test
+  needs:
+    - build
   artifacts:
     when: always
     paths:
@@ -135,6 +141,8 @@ coverage_test:
   allow_failure: true
   script:
     - yarn test:cov
+  needs:
+    - build
   artifacts:
     when: always
     paths:
@@ -168,6 +176,8 @@ functional_test:
   # allow_failure: true
   script:
     - yarn test:e2e
+  needs:
+    - build
   only:
     refs:
     - branches
@@ -190,6 +200,8 @@ detect_secrets:
   script:
     - detect-secrets scan $SCAN_SOURCE >> .detect-secrets-log.json
     - jq . .detect-secrets-log.json -C
+  needs:
+    - build
   only:
     refs:
     - branches
@@ -275,6 +287,8 @@ package_docker:
             ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:latest
         docker push ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:latest
       fi
+  needs:
+    - build
   only:
     refs:
       - master
@@ -306,6 +320,8 @@ validate_docker:
     - echo $DOCK_VERSION    
   script:
     - klar ${DOCK_REG_GCP}/${DOCK_REG_GRP}/${DOCK_IMG}:${DOCK_VERSION}
+  needs:
+    - package_docker
   retry: 1
   only:
     refs:
@@ -353,6 +369,10 @@ testing_k8s:
     - set_k8s
     - helm test ${RELEASE_NAME} --namespace ${KUBE_NAMESPACE}
     - kubectl delete pod ${RELEASE_NAME}-test-connection --namespace ${KUBE_NAMESPACE}
+  needs:
+    - deploy:dev
+    - deploy:qa
+    - deploy:prod
   only:
     refs:
       - develop
@@ -376,6 +396,10 @@ testing_api:
   cache: {}
   script:
     - newman run test/coffee-api.test.json --reporters cli,junit 
+  needs:
+    - deploy:dev
+    - deploy:qa
+    - deploy:prod
   only:
     refs:
       - develop
@@ -402,6 +426,10 @@ testing_load:
   cache: {}
   script:
     - k6 run test/coffee-api.loadtest.js 
+  needs:
+    - deploy:dev
+    - deploy:qa
+    - deploy:prod
   only:
     refs:
       - develop
@@ -430,6 +458,13 @@ rollback:
     - echo "Ejecutar comando de rollback con helm"
     - helm rollback $RELEASE_NAME $(helm history $RELEASE_NAME | grep deployed | cut -f1) --wait
     - helm status $RELEASE_NAME
+  needs:
+    - deploy:dev
+    - deploy:qa
+    - deploy:prod
+    - testing_k8s
+    - testing_api
+    - testing_load
   when: on_failure
   only:
     refs:
@@ -451,6 +486,10 @@ release:
   cache: {}
   script:
     - npx semantic-release
+  needs:
+    - testing_k8s
+    - testing_api
+    - testing_load
   only:
     refs:
       - master
