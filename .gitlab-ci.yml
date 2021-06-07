@@ -232,6 +232,7 @@ sonar_test:
   script:
     - sonar-scanner --debug
   needs:
+    - pre-semantic-version
     - unit_test
     - coverage_test
   only:
