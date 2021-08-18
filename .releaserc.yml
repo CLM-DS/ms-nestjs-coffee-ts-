@@ -11,7 +11,7 @@ tagFormat: '${version}'
 # Global plugin options (will be passed to all plugins)
 preset: 'conventionalcommits'
 gitlabUrl: 'https://gitlab.com/' # your gitlab url
-slackWebhook: 'https://hooks.slack.com/services/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'
+slackWebhook: 'https://hooks.slack.com/services/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'
 
 # Responsible for verifying conditions necessary to proceed with the release:
 # configuration is correct, authentication token are valid, etc...
