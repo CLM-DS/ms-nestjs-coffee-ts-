@@ -6,7 +6,7 @@ spec:
   hosts:
   - dummy.cloudsql.com # not used
   addresses:
-  - "10.39.193.3/32"
+  - "10.39.192.3/32"
   ports:
   - number: 5432
     name: tcp

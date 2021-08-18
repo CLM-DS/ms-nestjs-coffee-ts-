@@ -37,6 +37,7 @@ Common labels
 helm.sh/chart: {{ include "coffee-api.chart" . }}
 {{ include "coffee-api.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
+version: {{ .Chart.AppVersion | quote }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
@@ -46,6 +47,7 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Selector labels
 */}}
 {{- define "coffee-api.selectorLabels" -}}
+app: {{ include "coffee-api.name" . }}
 app.kubernetes.io/name: {{ include "coffee-api.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
