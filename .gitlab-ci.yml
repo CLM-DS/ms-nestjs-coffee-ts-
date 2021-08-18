@@ -48,7 +48,7 @@ stages:
     - docker
 
 pre-semantic-version:
-  image: clmdevops/semantic-release
+  image: clmdevops/semantic-release:17.4.5
   stage: pre-version
   only:
     refs:
@@ -448,7 +448,7 @@ rollback:
     - docker
 
 release:
-  image: clmdevops/semantic-release
+  image: clmdevops/semantic-release:17.4.5
   stage: release
   cache: {}
   script:
