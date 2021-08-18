@@ -14,18 +14,18 @@ spec:
       protocol: HTTP
     hosts:
     - "apicoffee.clm.team"
-    tls:
-      httpsRedirect: true # sends 301 redirect for http requests
-  - port:
-      number: 443
-      name: https
-      protocol: HTTPS
-    hosts:
-    - "apicoffee.clm.team"
-    tls:
-      mode: SIMPLE
-      serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
-      privateKey: /etc/istio/ingressgateway-certs/tls.key
+  #   tls:
+  #     httpsRedirect: true # sends 301 redirect for http requests
+  # - port:
+  #     number: 443
+  #     name: https
+  #     protocol: HTTPS
+  #   hosts:
+  #   - "apicoffee.clm.team"
+  #   tls:
+  #     mode: SIMPLE
+  #     serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
+  #     privateKey: /etc/istio/ingressgateway-certs/tls.key
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
