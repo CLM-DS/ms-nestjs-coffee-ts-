@@ -428,10 +428,10 @@ rollback:
   script:
     - set_k8s
     - echo "Realizar el rollback de la app a la version $RELEASE_NAME"
-    - helm history $RELEASE_NAME | grep deployed
+    - helm history $RELEASE_NAME --namespace ${KUBE_NAMESPACE} | grep deployed
     - echo "Ejecutar comando de rollback con helm"
-    - helm rollback $RELEASE_NAME $(helm history $RELEASE_NAME | grep deployed | cut -f1) --wait
-    - helm status $RELEASE_NAME
+    - helm rollback $RELEASE_NAME --namespace ${KUBE_NAMESPACE} 0 --wait
+    - helm status $RELEASE_NAME --namespace ${KUBE_NAMESPACE}
   when: on_failure
   only:
     refs:
