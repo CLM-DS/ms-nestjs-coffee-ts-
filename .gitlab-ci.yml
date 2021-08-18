@@ -89,7 +89,7 @@ build:
   image: node:14-alpine
   stage: build
   script:
-    - yarn install && yarn build
+    - yarn install --network-timeout 30000 && yarn build
   only:
     refs:
     - branches
