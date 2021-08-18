@@ -13,7 +13,7 @@
 # RUN ls
 
 ### RELEASE
-FROM node:latest AS relase
+FROM node:14-alpine AS relase
 WORKDIR /app
 # COPY --from=base /app/dist ./dist
 COPY ./dist ./dist
