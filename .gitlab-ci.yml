@@ -494,7 +494,7 @@ release:
       then
         # export KUBECONFIG=$KUBECONFIG_BASKET_DEV
         export GOOGLE_APPLICATION_CREDENTIALS=$GCP_CREDENTIALS_GKE
-        export KUBE_NAMESPACE=default
+        export KUBE_NAMESPACE=develop
         export RELEASE_NAME=coffee-api-dev
     fi
     echo "Realizar conexion al GKE"
