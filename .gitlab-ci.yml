@@ -296,7 +296,7 @@ validate_docker:
   stage: validate
   cache: {}
   variables:
-    CLAIR_ADDR: "clair"
+    CLAIR_ADDR: "clairsvc.default"
     CLAIR_OUTPUT: "Low"
     CLAIR_THRESHOLD: "10"
     FORMAT_OUTPUT: "table"
